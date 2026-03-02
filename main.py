@@ -3,10 +3,11 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKe
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters, ConversationHandler
 from flask import Flask
 import threading
+import os
 
 # --- CONFIGURATION ---
-# আপনার টোকেন এবং আইডি এখানে বসানো হয়েছে
-BOT_TOKEN = "8535441292:AAGbaOFGoMdXbh36w1IPwFBMvsymI__iOi4" 
+# আপনার নতুন টোকেনটি এখানে বসিয়েছি
+BOT_TOKEN = "8742568256:AAGcofy6BZ22gbyFHh0WbP7YRutND2D3WzM" 
 ADMIN_ID = 8474225355 
 MIN_WITHDRAW = 50
 
@@ -27,8 +28,9 @@ def home():
     return "Bot is running"
 
 def run_webserver():
-    # Render-এর জন্য ১০০০০ পোর্ট ব্যবহার করা নিরাপদ
-    app.run(host='0.0.0.0', port=10000)
+    # Render-এর জন্য PORT এনভায়রনমেন্ট ভেরিয়েবল ব্যবহার করা নিরাপদ
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
 # --- END OF WEB SERVER ---
 
 # --- HELPER FUNCTIONS ---
@@ -148,4 +150,4 @@ if __name__ == '__main__':
     print("Bot is running...")
     # Polling চালু করুন
     application.run_polling()
-    
+        
