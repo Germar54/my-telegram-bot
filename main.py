@@ -1,6 +1,8 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters, ConversationHandler
+from flask import Flask
+import threading
 
 # --- CONFIGURATION ---
 # আপনার টোকেন এবং আইডি এখানে বসানো হয়েছে
@@ -16,6 +18,18 @@ logging.basicConfig(
 
 # --- STATES ---
 MAIN_MENU, WORK_START, IG_MOTHER_SUB, WITHDRAW_MENU = range(4)
+
+# --- FLASK WEB SERVER FOR RENDER ---
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot is running"
+
+def run_webserver():
+    # Render-এর জন্য ১০০০০ পোর্ট ব্যবহার করা নিরাপদ
+    app.run(host='0.0.0.0', port=10000)
+# --- END OF WEB SERVER ---
 
 # --- HELPER FUNCTIONS ---
 async def get_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -65,7 +79,6 @@ async def main_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # --- WORK START LOGIC ---
 async def work_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
-    user = update.effective_user
     
     if text == "IG 2fa":
         await update.message.reply_text("আপনার এক্সেল ফাইলটি পাঠান")
@@ -108,6 +121,10 @@ async def handle_files(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- MAIN ---
 if __name__ == '__main__':
+    # Flask ওয়েব সার্ভার থ্রেড চালু করুন
+    t = threading.Thread(target=run_webserver)
+    t.start()
+    
     application = ApplicationBuilder().token(BOT_TOKEN).build()
     
     # এডমিন হ্যান্ডলারসমূহ
@@ -129,5 +146,6 @@ if __name__ == '__main__':
     application.add_handler(conv_handler)
     
     print("Bot is running...")
+    # Polling চালু করুন
     application.run_polling()
-                            
+    
