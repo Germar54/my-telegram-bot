@@ -7,7 +7,7 @@ import os
 # --- CONFIGURATION ---
 BOT_TOKEN = "8742568256:AAGcofy6BZ22gbyFHh0WbP7YRutND2D3WzM" 
 ADMIN_ID = 8474225355 
-# আপনার Render URL টি এখানে নিশ্চিত করুন
+# আপনার Render URL টি এখানে সঠিক রাখুন
 WEBHOOK_URL = "https://bot-es9z.onrender.com" 
 
 # --- LOGGING SETUP ---
@@ -22,12 +22,18 @@ MAIN_MENU, WORK_START, IG_MOTHER_SUB, WITHDRAW_MENU = range(4)
 # --- FLASK WEB SERVER FOR WEBHOOK ---
 app = Flask(__name__)
 
+# টেলিগ্রাম অ্যাপ্লিকেশন তৈরি (গ্লোবাল)
+bot_app = ApplicationBuilder().token(BOT_TOKEN).build()
+bot = bot_app.bot
+
 @app.route('/')
 def home():
     return "Bot is running"
 
+# টেলিগ্রাম থেকে আপডেট রিসিভ করার জন্য Webhook
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
 def webhook():
+    # এখানে লজিক ঠিক করা হয়েছে
     update = Update.de_json(request.get_json(), bot)
     bot_app.update_queue.put(update)
     return "OK"
@@ -65,7 +71,6 @@ async def main_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return MAIN_MENU
         
     elif text == "Withdraw":
-        # সমস্যা ৫: উইথড্র বাটন কাজ করছিল না, এখন বাটন যোগ করা হয়েছে
         keyboard = [
             ["বিকাশ", "নগদ", "রকেট"],
             ["বাইনান্স", "সেভ পেমেন্ট মেথড"],
@@ -85,10 +90,8 @@ async def work_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     if text == "IG 2fa":
         await update.message.reply_text("আপনার এক্সেল ফাইলটি পাঠান")
-        # সমস্যা ৩: শুধু এক্সেল ফাইল হ্যান্ডলারের জন্য ফাইল হ্যান্ডলার ফাংশন আপডেট করা হয়েছে
         
     elif text == "IGMother account 2fa":
-        # সমস্যা ৪: ব্যাক করে মেন মেনুতে যাওয়া ঠিক করা হয়েছে (এখন এই স্টেটে থাকবে)
         keyboard = [["File", "Single Account"], ["Refresh"]]
         await update.message.reply_text("অপশন বাছুন (Mother Account):", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
         return IG_MOTHER_SUB
@@ -107,7 +110,6 @@ async def admin_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         await update.message.reply_text("⛔ আপনি এডমিন নন!")
         return
-    # সমস্যা ১: ভুল টেক্সট ঠিক করা হয়েছে
     await update.message.reply_text("📊 এডমিন প্যানেল: ইউজারের তথ্য যাচাই করুন।")
 
 async def admin_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -117,9 +119,8 @@ async def admin_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- FILE HANDLER (Excel Only) ---
 async def handle_files(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # সমস্যা ৩: শুধু .xlsx বা .csv ফাইল সাপোর্ট করবে
     document = update.message.document
-    if document.file_name.endswith(('.xlsx', '.csv', '.xls')):
+    if document and document.file_name.endswith(('.xlsx', '.csv', '.xls')):
         await context.bot.send_message(chat_id=ADMIN_ID, text=f"📂 নতুন এক্সেল ফাইল এসেছে ইউজার ID: {update.effective_user.id}")
         await context.bot.send_document(chat_id=ADMIN_ID, document=document.file_id)
         await update.message.reply_text("✅ ফাইলটি এডমিনের কাছে পাঠানো হয়েছে।")
@@ -128,10 +129,7 @@ async def handle_files(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- MAIN ---
 if __name__ == '__main__':
-    bot_app = ApplicationBuilder().token(BOT_TOKEN).build()
-    bot = bot_app.bot
-    
-    # হ্যান্ডলারসমূহ
+    # হ্যান্ডলারসমূহ যোগ করুন
     bot_app.add_handler(CommandHandler("check", admin_check))
     bot_app.add_handler(CommandHandler("payment", admin_payment))
     
@@ -141,7 +139,7 @@ if __name__ == '__main__':
             MAIN_MENU: [MessageHandler(filters.TEXT & ~filters.COMMAND, main_menu_handler)],
             WORK_START: [MessageHandler(filters.TEXT & ~filters.COMMAND, work_start_handler)],
             WITHDRAW_MENU: [MessageHandler(filters.TEXT & ~filters.COMMAND, main_menu_handler)],
-            IG_MOTHER_SUB: [MessageHandler(filters.TEXT & ~filters.COMMAND, work_start_handler)], # Fix for #4
+            IG_MOTHER_SUB: [MessageHandler(filters.TEXT & ~filters.COMMAND, work_start_handler)],
         },
         fallbacks=[MessageHandler(filters.TEXT & ~filters.COMMAND, start)],
     )
@@ -150,11 +148,12 @@ if __name__ == '__main__':
     bot_app.add_handler(MessageHandler(filters.Document.ALL, handle_files))
     bot_app.add_handler(conv_handler)
     
-    # Webhook সেটআপ
+    # Webhook সেটআপ করুন
     bot.set_webhook(url=f"{WEBHOOK_URL}/{BOT_TOKEN}")
     
     print("Bot is running with Webhook...")
     
-    # Flask সার্ভার চালু
+    # Flask সার্ভার চালু করুন (Gunicorn দিয়ে চলবে)
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
+                
