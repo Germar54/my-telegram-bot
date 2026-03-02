@@ -3,8 +3,9 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKe
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters, ConversationHandler
 
 # --- CONFIGURATION ---
-BOT_TOKEN = "YOUR_BOT_TOKEN_HERE" # এখানে আপনার বটের টোকেন বসান
-ADMIN_ID = 123456789 # এখানে আপনার টেলিগ্রাম ইউজার আইডি বসান
+# আপনার টোকেন এবং আইডি এখানে বসানো হয়েছে
+BOT_TOKEN = "8535441292:AAGbaOFGoMdXbh36w1IPwFBMvsymI__iOi4" 
+ADMIN_ID = 8474225355 
 MIN_WITHDRAW = 50
 
 # --- LOGGING SETUP ---
@@ -14,7 +15,7 @@ logging.basicConfig(
 )
 
 # --- STATES ---
-MAIN_MENU, WORK_START, IG_MOTHER_SUB, WITHDRAW_MENU, PENDING_WITHDRAW = range(5)
+MAIN_MENU, WORK_START, IG_MOTHER_SUB, WITHDRAW_MENU = range(4)
 
 # --- HELPER FUNCTIONS ---
 async def get_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -68,7 +69,6 @@ async def work_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     if text == "IG 2fa":
         await update.message.reply_text("আপনার এক্সেল ফাইলটি পাঠান")
-        # ফাইল হ্যান্ডলিং লজিক এখানে যুক্ত হবে
         
     elif text == "IGMother account 2fa":
         keyboard = [["File", "Single Account"], ["Refresh"]]
@@ -84,6 +84,18 @@ async def work_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         
     return WORK_START
 
+# --- ADMIN PANEL LOGIC ---
+async def admin_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("⛔ আপনি এডমিন নন!")
+        return
+    await update.message.reply_text("📊 ইউজারের তথ্য পাঠানো হয়েছে (কোড লজিক লাগবে)")
+
+async def admin_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return
+    await update.message.reply_text("💰 ব্যালেন্স এডিট করা হয়েছে।")
+
 # --- FILE HANDLER (For Admin) ---
 async def handle_files(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -98,12 +110,16 @@ async def handle_files(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == '__main__':
     application = ApplicationBuilder().token(BOT_TOKEN).build()
     
+    # এডমিন হ্যান্ডলারসমূহ
+    application.add_handler(CommandHandler("check", admin_check))
+    application.add_handler(CommandHandler("payment", admin_payment))
+    
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
             MAIN_MENU: [MessageHandler(filters.TEXT & ~filters.COMMAND, main_menu_handler)],
             WORK_START: [MessageHandler(filters.TEXT & ~filters.COMMAND, work_start_handler)],
-            # অন্যান্য স্টেট এখানে যুক্ত হবে
+            WITHDRAW_MENU: [MessageHandler(filters.TEXT & ~filters.COMMAND, main_menu_handler)],
         },
         fallbacks=[MessageHandler(filters.TEXT & ~filters.COMMAND, start)],
     )
@@ -114,4 +130,4 @@ if __name__ == '__main__':
     
     print("Bot is running...")
     application.run_polling()
-  
+                            
