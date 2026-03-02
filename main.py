@@ -1,1 +1,117 @@
+import logging
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters, ConversationHandler
 
+# --- CONFIGURATION ---
+BOT_TOKEN = "YOUR_BOT_TOKEN_HERE" # এখানে আপনার বটের টোকেন বসান
+ADMIN_ID = 123456789 # এখানে আপনার টেলিগ্রাম ইউজার আইডি বসান
+MIN_WITHDRAW = 50
+
+# --- LOGGING SETUP ---
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+
+# --- STATES ---
+MAIN_MENU, WORK_START, IG_MOTHER_SUB, WITHDRAW_MENU, PENDING_WITHDRAW = range(5)
+
+# --- HELPER FUNCTIONS ---
+async def get_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        ["IG Work Start", "rules and price update"],
+        ["Withdraw", "Refresh"]
+    ]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    await update.message.reply_text("👋 মেইন মেনু:", reply_markup=reply_markup)
+    return MAIN_MENU
+
+# --- HANDLERS ---
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("হ্যালো! আমি একটি টেলিগ্রাম বট।")
+    return await get_main_menu(update, context)
+
+async def main_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    
+    if text == "IG Work Start":
+        keyboard = [
+            ["IG 2fa", "IGMother account 2fa"],
+            ["IG Cookies", "Refresh"]
+        ]
+        await update.message.reply_text("কাজ নির্বাচন করুন:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
+        return WORK_START
+        
+    elif text == "rules and price update":
+        keyboard = [[InlineKeyboardButton("View Link", url="https://t.me/instafbhub/19")]]
+        await update.message.reply_text("হাই", reply_markup=InlineKeyboardMarkup(keyboard))
+        return MAIN_MENU
+        
+    elif text == "Withdraw":
+        keyboard = [
+            ["বিকাশ", "নগদ", "রকেট"],
+            ["বাইনান্স", "সেভ পেমেন্ট মেথড"],
+            ["Refresh"]
+        ]
+        await update.message.reply_text("মেথড বাছুন:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
+        return WITHDRAW_MENU
+
+    elif text == "Refresh":
+        return await get_main_menu(update, context)
+    
+    return MAIN_MENU
+
+# --- WORK START LOGIC ---
+async def work_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    user = update.effective_user
+    
+    if text == "IG 2fa":
+        await update.message.reply_text("আপনার এক্সেল ফাইলটি পাঠান")
+        # ফাইল হ্যান্ডলিং লজিক এখানে যুক্ত হবে
+        
+    elif text == "IGMother account 2fa":
+        keyboard = [["File", "Single Account"], ["Refresh"]]
+        await update.message.reply_text("অপশন বাছুন:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
+        return IG_MOTHER_SUB
+
+    elif text == "IG Cookies":
+        keyboard = [[InlineKeyboardButton("File", callback_data="upload_cookies")]]
+        await update.message.reply_text("https://t.me/instafbhub/42", reply_markup=InlineKeyboardMarkup(keyboard))
+        
+    elif text == "Refresh":
+        return await get_main_menu(update, context)
+        
+    return WORK_START
+
+# --- FILE HANDLER (For Admin) ---
+async def handle_files(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    document = update.message.document
+    
+    # ফাইল এডমিনকে পাঠানোর লজিক
+    await context.bot.send_message(chat_id=ADMIN_ID, text=f"📂 নতুন ফাইল ইউজার ID: {user.id}")
+    await context.bot.send_document(chat_id=ADMIN_ID, document=document.file_id)
+    await update.message.reply_text("✅ ফাইল এডমিনের কাছে পাঠানো হয়েছে।")
+
+# --- MAIN ---
+if __name__ == '__main__':
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
+    
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('start', start)],
+        states={
+            MAIN_MENU: [MessageHandler(filters.TEXT & ~filters.COMMAND, main_menu_handler)],
+            WORK_START: [MessageHandler(filters.TEXT & ~filters.COMMAND, work_start_handler)],
+            # অন্যান্য স্টেট এখানে যুক্ত হবে
+        },
+        fallbacks=[MessageHandler(filters.TEXT & ~filters.COMMAND, start)],
+    )
+    
+    # ফাইল হ্যান্ডলার
+    application.add_handler(MessageHandler(filters.Document.ALL, handle_files))
+    application.add_handler(conv_handler)
+    
+    print("Bot is running...")
+    application.run_polling()
+  
